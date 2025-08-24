@@ -1,4 +1,4 @@
-from bjcards.bjcards import *
+from bjcards import *
 import os
 import random
 import torch
@@ -12,9 +12,23 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import json
 
 PERFORMANCE_DEBUG = False 
+INPUT_HANDS = "../data/file_test_1_mil0.json"
+LOG_OUTPUT = f"../outputs/logs"
+AGENT_OUTPUT = f"../outputs/saved_nns"
+LAYER_1_SIZE = 64
+LAYER_2_SIZE = 64
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+parameter_sets = [
+    {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.00005,  "epsilon_decay": 0.99995, "epsilon_min": 0.0005},
+    {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.0001,  "epsilon_decay": 0.99995, "epsilon_min": 0.001},
+    {"batch_size": 64, "gamma": 0.45, "learning_rate": 0.005,  "epsilon_decay": 0.99995, "epsilon_min": 0.01},
+    {"batch_size": 64, "gamma": 0.45, "learning_rate": 0.0005,  "epsilon_decay": 0.999985, "epsilon_min": 0.01},
+    {"batch_size": 64, "gamma": 0.45, "learning_rate": 0.001,  "epsilon_decay": 0.99995, "epsilon_min": 0.01},
+]
+
 
 class Fixed_shoe:
     def __init__(self, fixed_dealer_sequence=None, fixed_player_sequence=None):
@@ -36,12 +50,12 @@ class Fixed_shoe:
         if is_dealer:
             if self.dealer_index <= len(self.fixed_dealer_sequence):
                 current_hand = self.fixed_dealer_sequence[self.dealer_index]
-                if current_hand:  # Ensure the hand is not empty
+                if current_hand:
                     card = current_hand[length_of_hand]
         if is_dealer is False:
             if self.player_index <= len(self.fixed_player_sequence):
                 current_hand = self.fixed_player_sequence[self.player_index]
-                if current_hand:  # Ensure the hand is not empty
+                if current_hand:
                     card = current_hand[length_of_hand]
 
 
@@ -146,7 +160,7 @@ class BlackjackEnvAI:
                     else:
                         self.done = True
                 else:
-                    raise ValueError("ai is trying to double a hand it is not supposed to")
+                    raise ValueError("AI is trying to double a hand it is not supposed to")
 
             elif action == 3:
                 if len(self.player_hand.cards) == 2:
@@ -157,7 +171,7 @@ class BlackjackEnvAI:
                     self.player_hand.hand_value()
                     self.get_valid_actions()
                 else:
-                    raise ValueError("Ai tried to split an unqualified hand")
+                    raise ValueError("AI tried to split an unqualified hand")
 
             if self.done:
                 player_value = self.player_hand.hand_value()
@@ -206,9 +220,9 @@ class BlackjackEnvAI:
 class DQN(nn.Module):
     def __init__(self, action_size=4):
         super(DQN, self).__init__()
-        self.fc1 = nn.Linear(4, 16)
-        self.fc2 = nn.Linear(16, 16)
-        self.fc3 = nn.Linear(16, action_size)
+        self.fc1 = nn.Linear(4, LAYER_1_SIZE)
+        self.fc2 = nn.Linear(LAYER_1_SIZE, LAYER_2_SIZE)
+        self.fc3 = nn.Linear(LAYER_2_SIZE, action_size)
 
     def forward(self, x):
         x = torch.relu(self.fc1(x))
@@ -323,7 +337,7 @@ class DQNAgent:
         plt.xlabel('Episode')
         plt.ylabel('Cumulative Value')
 
-        save_path = os.path.join('plots', filename)
+        save_path = os.path.join('../outputs/plots', filename)
         os.makedirs('plots', exist_ok=True)  
         plt.savefig(save_path)
         plt.close() 
@@ -353,7 +367,7 @@ class DQNAgent:
         self.optimizer.step()
 
 
-def load_logs(filename="card_logs.json"):
+def load_logs(filename=INPUT_HANDS):
     with open(filename, "r") as file:
         logs = json.load(file)
 
@@ -391,17 +405,16 @@ def train_model_wrapper(param_index, param_dict, dealer_hands, player_hands):
         epsilon_min=param_dict["epsilon_min"]
     )
 
-    log_file = f"logs/training_log_model_{param_index+1}.json"
+    log_file = f"{LOG_OUTPUT}/training_log_model_{param_index+1}.json"
 
-    # Wrap the train loop with a progress hook
     def progress_callback(current_step):
             pbar.n = current_step
             pbar.refresh()
 
-    agent.train(total_steps, log_file, process_callback=progress_callback)  # assumes your train method supports it
+    agent.train(total_steps, log_file, process_callback=progress_callback)
     pbar.close()
 
-    model_path = f"outputs/saved_nns/model_{param_index+1}.pth"
+    model_path = f"{AGENT_OUTPUT}/saved_nn/model_{param_index+1}.pth"
     torch.save(agent.model.state_dict(), model_path)
     print(f"Model {param_index+1} saved at {model_path}")
 
@@ -409,42 +422,11 @@ def train_model_wrapper(param_index, param_dict, dealer_hands, player_hands):
 
 if __name__ == "__main__":
     mp.set_start_method('spawn', force=True)
-
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Training device: {torch.device('cuda' if torch.cuda.is_available() else 'cpu')}")
 
-    dealer_hands, player_hands = load_logs("test_json/Complete_card_set_million.json")
+    dealer_hands, player_hands = load_logs(INPUT_HANDS)
 
-    parameter_sets = [
-        {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.00005,  "epsilon_decay": 0.99995, "epsilon_min": 0.0005},
-        {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.0001,  "epsilon_decay": 0.99995, "epsilon_min": 0.001}, #BEST AT Average reward: 0.029 Average winnings: -0.0155
-        {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.0001,  "epsilon_decay": 0.999985, "epsilon_min": 0.0001},
-        {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.0005,  "epsilon_decay": 0.99995, "epsilon_min": 0.001},
-        {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.0001,  "epsilon_decay": 0.99995, "epsilon_min": 0.001},
-        {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.00005,  "epsilon_decay": 0.99998, "epsilon_min": 0.0001},
-        {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.00005,  "epsilon_decay": 0.9999, "epsilon_min": 0.0005},
-        {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.0005,  "epsilon_decay": 0.99995, "epsilon_min": 0.001},
-        {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.00005,  "epsilon_decay": 0.99997, "epsilon_min": 0.001},
-        {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.0001,  "epsilon_decay": 0.9999, "epsilon_min": 0.001},
-        {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.00005,  "epsilon_decay": 0.99995, "epsilon_min": 0.0005},
-        {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.0005,  "epsilon_decay": 0.99995, "epsilon_min": 0.001},
-        {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.00005,  "epsilon_decay": 0.999975, "epsilon_min": 0.001},
-        {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.0001,  "epsilon_decay": 0.99999, "epsilon_min": 0.01},
-
-        {"batch_size": 128, "gamma": 0.30, "learning_rate": 0.0001,  "epsilon_decay": 0.99995, "epsilon_min": 0.0005},
-        {"batch_size": 128, "gamma": 0.30, "learning_rate": 0.0001,  "epsilon_decay": 0.99995, "epsilon_min": 0.1},
-        {"batch_size": 128, "gamma": 0.30, "learning_rate": 0.0001,  "epsilon_decay": 0.999985, "epsilon_min": 0.001},
-        {"batch_size": 64, "gamma": 0.30, "learning_rate": 0.0005,  "epsilon_decay": 0.99995, "epsilon_min": 0.01},
-        {"batch_size": 64, "gamma": 0.30, "learning_rate": 0.0001,  "epsilon_decay": 0.999975, "epsilon_min": 0.01},
-        {"batch_size": 64, "gamma": 0.30, "learning_rate": 0.0005,  "epsilon_decay": 0.999985, "epsilon_min": 0.001},
-        {"batch_size": 64, "gamma": 0.30, "learning_rate": 0.0005,  "epsilon_decay": 0.99995, "epsilon_min": 0.005},
-        {"batch_size": 64, "gamma": 0.45, "learning_rate": 0.005,  "epsilon_decay": 0.99995, "epsilon_min": 0.01},
-        {"batch_size": 64, "gamma": 0.45, "learning_rate": 0.0005,  "epsilon_decay": 0.999985, "epsilon_min": 0.01},
-        {"batch_size": 64, "gamma": 0.45, "learning_rate": 0.001,  "epsilon_decay": 0.99995, "epsilon_min": 0.01},
-    ]
-    # parameter_sets = [
-    #     {"batch_size": 32, "gamma": 0.35, "learning_rate": 0.0001,  "epsilon_decay": 0.999999, "epsilon_min": 0.01}
-    # ]
-    #
     with ProcessPoolExecutor(max_workers=4) as executor:
         futures = []
         for i, param in enumerate(parameter_sets):

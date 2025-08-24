@@ -8,9 +8,9 @@ import cProfile
 import pstats
 import json
 
-
-PERFORMANCE_DEBUG = False 
-
+PERFORMANCE_DEBUG = False
+OUTPUT_FILEPATH = "../data/file_test_1_mil"
+NUMB_HANDS = 1000000
 
 class Card:
     values = {
@@ -86,7 +86,7 @@ class Hand:
         self.split_multiplier = 1
         self.has_doubled = False
         self.num_aces = 0
-        self.is_soft = None 
+        self.is_soft = False
         self.check_soft()
 
     def add_card(self, card) -> None:
@@ -112,7 +112,7 @@ class Hand:
             self.is_soft = True
         else:
             self.is_soft = False
-        
+
     def hand_is_splitable(self) -> bool:
         if self.cards[0].value == self.cards[1].value:
             if len(self.cards) == 2:
@@ -184,7 +184,7 @@ class BlackjackEnvAI:
         has_doubled = False
         has_busted = False
         blackjack = False
-        
+
         if not self.check_dealer_blackjack():
             if action == 0:  # Hit
                 self.player_hand.add_card(self.shoe.deal())
@@ -239,15 +239,14 @@ class BlackjackEnvAI:
                     reward = 0
                 reward *= self.player_hand.split_multiplier
 
-                while player_value < 31 and not self.player_hand.check_soft():
+                while player_value < 31 and not self.player_hand.is_soft:
                     self.player_hand.add_card(self.shoe.deal())
                     player_value = self.player_hand.hand_value()
 
-                while dealer_value < 21 and not self.dealer_hand.check_soft():
+                while dealer_value < 17 and not self.dealer_hand.is_soft:
                     self.dealer_hand.add_card(self.shoe.deal())
                     dealer_value = self.dealer_hand.hand_value()
-                    
-                    
+
                 ghost_values = [int(card.value) for card in self.ghost_cards]
                 player_values = [int(card.value) for card in self.player_hand.cards]
 
@@ -261,7 +260,7 @@ class BlackjackEnvAI:
                 reward = -1
             self.done = True
 
-            self.player_card_log.append([int(card.value) for card in self.player_hand.cards])            
+            self.player_card_log.append([int(card.value) for card in self.player_hand.cards])
             self.dealer_card_log.append([int(card.value) for card in self.dealer_hand.cards])
 
         next_state = self.get_state_representation()
@@ -273,9 +272,9 @@ class BlackjackEnvAI:
 class DQN(nn.Module):
     def __init__(self, action_size=3):
         super(DQN, self).__init__()
-        self.fc1 = nn.Linear(4, 128)
-        self.fc2 = nn.Linear(128, 64)
-        self.fc3 = nn.Linear(64, action_size)
+        self.fc1 = nn.Linear(4, 4)
+        self.fc2 = nn.Linear(4, 4)
+        self.fc3 = nn.Linear(4, action_size)
 
     def forward(self, x):
         x = torch.relu(self.fc1(x))
@@ -284,11 +283,11 @@ class DQN(nn.Module):
 
 
 class DQNAgent:
-    def __init__(self, env, action_size=4, state_size=4, batch_size=128, gamma=0.95, epsilon=1.0, epsilon_decay=0.995, epsilon_min=0.01):
+    def __init__(self, env, action_size=4, state_size=4, batch_size=128, gamma=0.95, epsilon=1.0, epsilon_decay=0, epsilon_min=0.01):
         self.env = env
         self.state_size = state_size
         self.action_size = action_size
-        self.memory = deque(maxlen=2000)
+        self.memory = deque(maxlen=500)
         self.batch_size = batch_size
         self.gamma = gamma
         self.epsilon = epsilon
@@ -299,10 +298,10 @@ class DQNAgent:
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.0005)
         self.criterion = nn.MSELoss()
 
-    def train(self, episodes=131072):
+    def train(self, episodes=NUMB_HANDS):
         rewards_list = []
         cumulative_reward = 0
-        for _ in tqdm(range(episodes), desc= "Training Progress", miniters=250):
+        for _ in tqdm(range(episodes), desc= "Building Card Dataset", miniters=10000):
             state = self.env.reset()
             state = state.to(device)
             if isinstance(state, torch.Tensor):
@@ -337,9 +336,8 @@ class DQNAgent:
                 if done:
                     break
 
-            # Train the model if memory has enough samples
-            if len(self.memory) >= self.batch_size:
-                self.replay()
+            #if len(self.memory) >= self.batch_size:
+            #   self.replay()
 
             # Decay epsilon
             if self.epsilon > self.epsilon_min:
@@ -371,12 +369,17 @@ class DQNAgent:
         loss.backward()
         self.optimizer.step()
 
-
-def save_logs(dealer_log, player_log, filename="test_json/unnamed_result"):
+'''
+def save_logs(dealer_log, player_log, filename):
     logs = {
         "dealer_cards": dealer_log,
         "player_cards": player_log
     }
+    with open(filename, "w") as file:
+        json.dump(logs, file, indent=2)
+'''
+
+def save_logs(dealer_log, player_log, filename):
 
     with open(filename, "w") as file:
         file.write("{\n")
@@ -402,15 +405,9 @@ def save_logs(dealer_log, player_log, filename="test_json/unnamed_result"):
         file.write("}\n")
 
 
-def load_logs(filename="card_logs.json"):
-    with open(filename, "r") as file:
-        logs = json.load(file)
-    return logs["dealer_cards"], logs["player_cards"]
-
-
 if __name__ == "__main__":
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    for i in range(5):
+    device = torch.device("cpu")
+    for i in range(1):
         environment = BlackjackEnvAI()
         agent = DQNAgent(environment)
 
@@ -428,5 +425,6 @@ if __name__ == "__main__":
         else:
             agent.train()
 
-        save_logs(environment.dealer_card_log, environment.player_card_log, f"test_json/100k({i + 5}).json")
-        print(f"finished {i +1} training loops")
+        save_logs(environment.dealer_card_log, environment.player_card_log, f"{OUTPUT_FILEPATH}{i}.json")
+        print(f"writing to {OUTPUT_FILEPATH}{i}.json")
+        print(f"finished {i + 1} training loops")

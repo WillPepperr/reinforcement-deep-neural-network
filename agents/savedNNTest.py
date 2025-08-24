@@ -1,15 +1,12 @@
-from bjcards.bjcards import *    
-import os
-import random
+from bjcards import *
 import torch
 import torch.nn as nn
-import torch.optim as optim
-import matplotlib.pyplot as plt
-from collections import deque
-from tqdm import tqdm
-import cProfile
-import pstats
 import json
+
+INPUT_HANDS = "../data/ten_million.json"
+NN_PATH = "../outputs/saved_nns/model_4.pth"
+LAYER_1 = 16
+LAYER_2 = 16
 
 class Fixed_shoe:
     def __init__(self, fixed_dealer_sequence=None, fixed_player_sequence=None):
@@ -141,7 +138,7 @@ class BlackjackEnvAI:
                         self.done = True
                 else:
                     raise ValueError("ai is trying to double a hand it is not supposed to")
-            
+
             elif action == 3:
                 if len(self.player_hand.cards) == 2:
                     self.player_hand.has_split = True
@@ -163,7 +160,7 @@ class BlackjackEnvAI:
                 while dealer_value < 17 and not player_has_busted:
                     self.dealer_hand.add_card(self.shoe.deal(is_dealer=True, length_of_hand=len(self.dealer_hand.cards)))
                     dealer_value = self.dealer_hand.hand_value()
-                
+
                 if not player_has_busted:
                     if blackjack:
                         reward = 1.5
@@ -197,13 +194,13 @@ class BlackjackEnvAI:
         return next_state, reward, winnings, self.done
 
 
-    
+
 class DQN(nn.Module):
     def __init__(self, action_size=4):
         super(DQN, self).__init__()
-        self.fc1 = nn.Linear(4, 64)
-        self.fc2 = nn.Linear(64, 64)
-        self.fc3 = nn.Linear(64, action_size)
+        self.fc1 = nn.Linear(4, LAYER_1)
+        self.fc2 = nn.Linear(LAYER_1, LAYER_2)
+        self.fc3 = nn.Linear(LAYER_2, action_size)
 
     def forward(self, x):
         x = torch.relu(self.fc1(x))
@@ -216,7 +213,7 @@ def load_logs(filename="card_logs.json"):
     with open(filename, "r") as file:
         logs = json.load(file)
 
-    # Ensure only integers are passed as card values
+     # Ensure only integers are passed as card values
     dealer_cards = [[int(v) if isinstance(v, (int, str)) else v.value for v in hand] for hand in logs["dealer_cards"]]
     player_cards = [[int(v) if isinstance(v, (int, str)) else v.value for v in hand] for hand in logs["player_cards"]]
 
@@ -226,36 +223,38 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Testing device: {device}")
 
-    dealer_hands, player_hands = load_logs("test_json/100k(4).json")
+    dealer_hands, player_hands = load_logs(INPUT_HANDS)
 
     env = BlackjackEnvAI(dealer_sequence=dealer_hands, player_sequence=player_hands)
 
     model = DQN(action_size=4).to(device)
-    model.load_state_dict(torch.load("outputs/saved_nns/model_1.pth", map_location=device))
-    model.eval()
+    for i in range(4):
+        NN_PATH = f"../outputs/saved_nns/model_{i+1}.pth"
+        model.load_state_dict(torch.load(NN_PATH, map_location=device))
+        model.eval()
 
-    total_reward = 0
-    total_winnings = 0
-    for episode in range(len(dealer_hands)):
-        state = env.reset()
-        done = False
-        episode_reward = 0
-        episode_winnings = 0
-        if episode % 10000 == 0:
-            print(f"{episode} completed episodes")
-        while not done:
-            state = state.to(device)
-            with torch.no_grad():
-                q_values = model(state)
-                valid_actions = env.get_valid_actions()
-                masked_q_values = torch.full_like(q_values, -float('inf'))
-                for a in valid_actions:
-                    masked_q_values[a] = q_values[a]
-                action = masked_q_values.argmax().item()
-            state, reward, winnings, done = env.step(action)
-            episode_reward += reward
-            episode_winnings += winnings
-        total_reward += episode_reward
-        total_winnings += episode_winnings 
-    print(f"Average reward: {total_reward / len(dealer_hands)}")
-    print(f"Average winnings: {total_winnings / len(dealer_hands)}")
+        total_reward = 0
+        total_winnings = 0
+        for episode in range(len(dealer_hands)):
+            state = env.reset()
+            done = False
+            episode_reward = 0
+            episode_winnings = 0
+            if episode % 10000 == 0:
+                print(f"{episode} completed episodes")
+            while not done:
+                state = state.to(device)
+                with torch.no_grad():
+                    q_values = model(state)
+                    valid_actions = env.get_valid_actions()
+                    masked_q_values = torch.full_like(q_values, -float('inf'))
+                    for a in valid_actions:
+                        masked_q_values[a] = q_values[a]
+                    action = masked_q_values.argmax().item()
+                state, reward, winnings, done = env.step(action)
+                episode_reward += reward
+                episode_winnings += winnings
+            total_reward += episode_reward
+            total_winnings += episode_winnings 
+        print(f"Average reward: {total_reward / len(dealer_hands)}")
+        print(f"Average winnings: {total_winnings / len(dealer_hands)}")

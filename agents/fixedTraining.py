@@ -1,4 +1,4 @@
-from bjcards.bjcards import *    
+from bjcards import *
 import os
 import random
 import torch
@@ -12,6 +12,8 @@ import pstats
 import json
 
 PERFORMANCE_DEBUG = False 
+INPUT_HANDS = "../data/file_test_1_mil0.json"
+AGENT_OUTPUT = "../outputs/saved_nns/model.pth"
 
 class Fixed_shoe:
     def __init__(self, fixed_dealer_sequence=None, fixed_player_sequence=None):
@@ -143,8 +145,8 @@ class BlackjackEnvAI:
                     else:
                         self.done = True
                 else:
-                    raise ValueError("ai is trying to double a hand it is not supposed to")
-            
+                    raise ValueError("AI is trying to double a hand it is not supposed to")
+
             elif action == 3:
                 if len(self.player_hand.cards) == 2:
                     self.player_hand.has_split = True
@@ -154,7 +156,7 @@ class BlackjackEnvAI:
                     self.player_hand.hand_value()
                     self.get_valid_actions()
                 else:
-                    raise ValueError("Ai tried to split an unqualified hand")
+                    raise ValueError("AI tried to split an unqualified hand")
 
             if self.done:
                 player_value = self.player_hand.hand_value()
@@ -166,7 +168,7 @@ class BlackjackEnvAI:
                 while dealer_value < 17 and not player_has_busted:
                     self.dealer_hand.add_card(self.shoe.deal(is_dealer=True, length_of_hand=len(self.dealer_hand.cards)))
                     dealer_value = self.dealer_hand.hand_value()
-                
+
                 if not player_has_busted:
                     if blackjack:
                         reward = 1.5
@@ -200,7 +202,7 @@ class BlackjackEnvAI:
         return next_state, reward, winnings, self.done
 
 
-    
+
 class DQN(nn.Module):
     def __init__(self, action_size=4):
         super(DQN, self).__init__()
@@ -230,14 +232,14 @@ class DQNAgent:
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)
         self.criterion = nn.MSELoss()
 
-    def train(self, episodes=50000, log_file="outputs/nn_decision_logs.json"):
+    def train(self, episodes=100000, log_file="../outputs/nn_decision_logs.json"):
         rewards_list = []
         winnings_list = []
         cumulative_reward = 0
         cumulative_winnings = 0
         open(log_file, "w").close()
 
-        for episode in tqdm(range(episodes), desc="Training Progress", miniters=1000):
+        for _ in tqdm(range(episodes), desc="Training Progress", miniters=1000):
             state = self.env.reset()
             state = state.to(device)
             if isinstance(state, torch.Tensor):
@@ -297,26 +299,26 @@ class DQNAgent:
             winnings_list.append(cumulative_winnings)
         self.plot_data(rewards_list, type='rewards')
         self.plot_data(winnings_list, type='winnings')
-        
+
     def plot_data(self, data_list, type):
         plt.figure()  
         plt.plot(data_list)
-        
+
         if type == 'rewards':
             plt.title('Rewards')
             filename = 'rewards_plot.png'
         else:
             plt.title('Winnings')
             filename = 'winnings_plot.png'
-        
+
         plt.xlabel('Episode')
         plt.ylabel('Cumulative Value')
 
-        save_path = os.path.join('plots', filename)
+        save_path = os.path.join('../outputs/plots', filename)
         os.makedirs('plots', exist_ok=True)  
         plt.savefig(save_path)
         plt.close() 
-        
+
     def replay(self):
         batch = random.sample(self.memory, self.batch_size)
         states, actions, rewards, next_states, dones = zip(*batch)
@@ -365,13 +367,15 @@ def log_decision(log_file, state, valid_actions, chosen_action, reward, winnings
 if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Training deveice: {device}")
-    print(torch.version.cuda)
     print(torch.cuda.get_device_name(0))
     print(torch.backends.cudnn.version())
-    dealer_hands, player_hands = load_logs("test_json/Complete_card_set_million.json")
+    dealer_hands, player_hands = load_logs(INPUT_HANDS)
     environment = BlackjackEnvAI(dealer_sequence=dealer_hands, player_sequence=player_hands)
     agent = DQNAgent(environment)
-    if PERFORMANCE_DEBUG:
+    if  not PERFORMANCE_DEBUG:
+        agent.train(len(dealer_hands))
+
+    else: 
         profiler = cProfile.Profile()
         with profiler:
             agent.train(len(dealer_hands))
@@ -382,7 +386,4 @@ if __name__ == "__main__":
         stats.sort_stats("tottime")
         stats.print_stats(75)
 
-    else:
-        agent.train(len(dealer_hands))
-
-    torch.save(agent.model.state_dict(), 'outputs/saved_nns/high_decay/dqn_model_improved.pth')
+    torch.save(agent.model.state_dict(), AGENT_OUTPUT)
