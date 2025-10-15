@@ -200,7 +200,6 @@ class BlackjackEnvAI:
                 reward *= self.player_hand.split_multiplier
                 winnings *= self.player_hand.split_multiplier
         else:
-            # Handle dealer blackjack cases
             if self.check_player_blackjack():
                 reward = 0
                 winnings = 0
@@ -209,7 +208,6 @@ class BlackjackEnvAI:
                 winnings = -1
             self.done = True
 
-        # Signal hand completion to Shoe
         if self.is_hand_over():
             self.shoe.deal(hand_over_signal=True)
 
@@ -371,7 +369,6 @@ def load_logs(filename=INPUT_HANDS):
     with open(filename, "r") as file:
         logs = json.load(file)
 
-    # Ensure only integers are passed as card values
     dealer_cards = [[int(v) if isinstance(v, (int, str)) else v.value for v in hand] for hand in logs["dealer_cards"]]
     player_cards = [[int(v) if isinstance(v, (int, str)) else v.value for v in hand] for hand in logs["player_cards"]]
 
