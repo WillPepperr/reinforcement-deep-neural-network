@@ -314,7 +314,6 @@ class DQNAgent:
                         file.write(json.dumps(entry) + "\n")
                 log_buffer.clear()
 
-            # 🚀 Callback to update progress
             if process_callback and (episode +1) % 500 == 0:
                 process_callback(episode + 1)
 
@@ -411,7 +410,7 @@ def train_model_wrapper(param_index, param_dict, dealer_hands, player_hands):
     agent.train(total_steps, log_file, process_callback=progress_callback)
     pbar.close()
 
-    model_path = f"{AGENT_OUTPUT}/saved_nn/model_{param_index+1}.pth"
+    model_path = f"{AGENT_OUTPUT}/saved_nns/model_{param_index+1}.pth"
     torch.save(agent.model.state_dict(), model_path)
     print(f"Model {param_index+1} saved at {model_path}")
 

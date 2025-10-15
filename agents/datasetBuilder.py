@@ -9,7 +9,7 @@ import pstats
 import json
 
 PERFORMANCE_DEBUG = False
-OUTPUT_FILEPATH = "../data/card_dataset"
+OUTPUT_FILEPATH = "../data/test_dataset"
 NUM_HANDS = 1000000
 
 class Card:
@@ -393,24 +393,23 @@ def save_logs(dealer_log, player_log, filename):
 
 if __name__ == "__main__":
     device = torch.device("cpu")
-    for i in range(1):
-        environment = BlackjackEnvAI()
-        agent = DQNAgent(environment)
+    environment = BlackjackEnvAI()
+    agent = DQNAgent(environment)
 
-        if PERFORMANCE_DEBUG:
-            profiler = cProfile.Profile()
-            with profiler:
-                agent.train()
-
-            stats = pstats.Stats(profiler)
-
-            stats.strip_dirs()
-            stats.sort_stats("tottime")
-            stats.print_stats(75)
-
-        else:
+    if PERFORMANCE_DEBUG:
+        profiler = cProfile.Profile()
+        with profiler:
             agent.train()
 
-        save_logs(environment.dealer_card_log, environment.player_card_log, f"{OUTPUT_FILEPATH}{i}.json")
-        print(f"writing to {OUTPUT_FILEPATH}{i}.json")
-        print(f"finished {i + 1} training loops")
+        stats = pstats.Stats(profiler)
+
+        stats.strip_dirs()
+        stats.sort_stats("tottime")
+        stats.print_stats(75)
+
+    else:
+        agent.train()
+
+    save_logs(environment.dealer_card_log, environment.player_card_log, f"{OUTPUT_FILEPATH}.json")
+    print(f"writing to {OUTPUT_FILEPATH}.json")
+    print(f"finished building dataset")

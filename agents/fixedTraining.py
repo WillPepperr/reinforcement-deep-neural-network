@@ -301,7 +301,7 @@ class DQNAgent:
         self.plot_data(winnings_list, type='winnings')
 
     def plot_data(self, data_list, type):
-        plt.figure()  
+        plt.figure()
         plt.plot(data_list)
 
         if type == 'rewards':
