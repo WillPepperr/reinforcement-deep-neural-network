@@ -12,7 +12,7 @@ import pstats
 import json
 
 PERFORMANCE_DEBUG = False 
-INPUT_HANDS = "../data/file_test_1_mil0.json"
+INPUT_HANDS = "../data/card_dataset.json"
 AGENT_OUTPUT = "../outputs/saved_nns/model.pth"
 
 class Fixed_shoe:

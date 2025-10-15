@@ -12,11 +12,12 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import json
 
 PERFORMANCE_DEBUG = False 
-INPUT_HANDS = "../data/file_test_1_mil0.json"
+INPUT_HANDS = "../data/card_dataset.json"
 LOG_OUTPUT = f"../outputs/logs"
 AGENT_OUTPUT = f"../outputs/saved_nns"
-LAYER_1_SIZE = 64
-LAYER_2_SIZE = 64
+
+LAYER_1_SIZE = 32
+LAYER_2_SIZE = 32
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -26,7 +27,6 @@ parameter_sets = [
     {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.0001,  "epsilon_decay": 0.99995, "epsilon_min": 0.001},
     {"batch_size": 64, "gamma": 0.45, "learning_rate": 0.005,  "epsilon_decay": 0.99995, "epsilon_min": 0.01},
     {"batch_size": 64, "gamma": 0.45, "learning_rate": 0.0005,  "epsilon_decay": 0.999985, "epsilon_min": 0.01},
-    {"batch_size": 64, "gamma": 0.45, "learning_rate": 0.001,  "epsilon_decay": 0.99995, "epsilon_min": 0.01},
 ]
 
 

@@ -9,8 +9,8 @@ import pstats
 import json
 
 PERFORMANCE_DEBUG = False
-OUTPUT_FILEPATH = "../data/file_test_1_mil"
-NUMB_HANDS = 1000000
+OUTPUT_FILEPATH = "../data/card_dataset"
+NUM_HANDS = 1000000
 
 class Card:
     values = {
@@ -298,7 +298,7 @@ class DQNAgent:
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.0005)
         self.criterion = nn.MSELoss()
 
-    def train(self, episodes=NUMB_HANDS):
+    def train(self, episodes=NUM_HANDS):
         rewards_list = []
         cumulative_reward = 0
         for _ in tqdm(range(episodes), desc= "Building Card Dataset", miniters=10000):
@@ -336,10 +336,7 @@ class DQNAgent:
                 if done:
                     break
 
-            #if len(self.memory) >= self.batch_size:
-            #   self.replay()
 
-            # Decay epsilon
             if self.epsilon > self.epsilon_min:
                 self.epsilon *= self.epsilon_decay
 
@@ -369,22 +366,12 @@ class DQNAgent:
         loss.backward()
         self.optimizer.step()
 
-'''
-def save_logs(dealer_log, player_log, filename):
-    logs = {
-        "dealer_cards": dealer_log,
-        "player_cards": player_log
-    }
-    with open(filename, "w") as file:
-        json.dump(logs, file, indent=2)
-'''
 
 def save_logs(dealer_log, player_log, filename):
 
     with open(filename, "w") as file:
         file.write("{\n")
 
-        # Write dealer_cards with each inner list on a new line
         file.write('  "dealer_cards": [\n')
         for i, dealer_hand in enumerate(dealer_log):
             file.write(f"    {json.dumps(dealer_hand)}")
@@ -393,7 +380,6 @@ def save_logs(dealer_log, player_log, filename):
             file.write("\n")
         file.write("  ],\n")
 
-        # Write player_cards with each inner list on a new line
         file.write('  "player_cards": [\n')
         for i, player_hand in enumerate(player_log):
             file.write(f"    {json.dumps(player_hand)}")
