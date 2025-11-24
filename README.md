@@ -1,7 +1,7 @@
 """
 # AI Blackjack Player
 
-An AI agent that learns how to play Blackjack using PyTorch and deep reinforcement learning. This project includes simulation, training, and benchmarking modules to evaluate AI performance.
+An AI agent that learns how to play Blackjack using PyTorch and deep reinforcement learning. This includes a realalistic simulated blackjack training evniornment, card dataset builder for consistant input data, and benchmarking modules to evaluate AI performance.
 
 ## Table of Contents
 - [Project Overview](#project-overview)
@@ -12,22 +12,20 @@ An AI agent that learns how to play Blackjack using PyTorch and deep reinforceme
   - [Training](#training)
   - [Multithreaded Training](#multithreaded-training)
   - [Testing / Benchmarking](#testing--benchmarking)
+- [Ruleset](#ruleset)
 - [Constants](#constants)
 - [Requirements](#requirements)
-- [File Structure](#file-structure)
 - [Note](#note)
-- [Contributing](#contributing)
-- [License](#license)
 
 ## Project Overview
-This project implements an AI agent that learns to play Blackjack using deep reinforcement learning with PyTorch. The AI is trained using datasets generated via Monte Carlo simulations and can be benchmarked against saved datasets or models.
+This project implements an AI agent that learns to play Blackjack using deep reinforcement learning with PyTorch. The AI is trained using datasets generated via Monte Carlo simulations, which provide a dataset of cards that can be benchmarked for comparing models performance.
 
-This project is **experimental** and not intended to be reproducible or production-ready. The goal is to explore reinforcement learning on Blackjack, with a reported result of around 1% loss vs the 0.5% theoretical optimal loss.
+This project is **experimental** and not intended to be reproducible or production-ready. The goal is to explore reinforcement learning on Blackjack, with my best training result being 1% loss vs the 0.5% theoretical optimal loss for the given ruleset.
 
 ## Features
 - Generate datasets of Blackjack games for training
-- Train reinforcement learning models using PyTorch
-- Support for multithreaded training to create multiple models efficiently
+- Train reinforcement learning models using PyTorch, (with GPU acceleration via Nvidia CUDA capable card)
+- Support for multithreaded training to create multiple models efficiently (potential improvement with better GPU utalization)
 - Benchmark trained models against test datasets
 
 ## Installation
@@ -39,10 +37,11 @@ cd <repo-folder>
 pip install -r requirements.txt
 ```
 
+
 ## Usage
 
 ### Dataset Builder
-`datasetBuilder.py` generates Blackjack game data for training the AI model.
+`datasetBuilder.py` generates Blackjack game data for training the AI model, ensuring training and tests between models are comparable.
 
 ```bash
 python agents/datasetBuilder.py
@@ -63,40 +62,13 @@ python agents/multithreadedTraining.py
 ```
 
 ### Testing / Benchmarking
-`NNTest.py` benchmarks a saved model against a saved dataset.
+`NNTest.py` benchmarks a saved model against a saved dataset. To avoid overfitting, create a different dataset for testing.
 
 ```bash
 python agents/NNTest.py
 ```
-
-## Constants
-
-### datasetBuilder.py
-```python
-PERFORMANCE_DEBUG = False
-OUTPUT_FILEPATH = "../data/card_dataset"
-NUM_HANDS = 1000000
-```
-
-### fixedTraining.py
-```python
-PERFORMANCE_DEBUG = False
-INPUT_HANDS = "../data/card_dataset.json"
-AGENT_OUTPUT = "../outputs/saved_nns/model.pth"
-```
-
-### multithreadedTraining.py
-```python
-INPUT_HANDS = "../data/card_dataset.json"
-LOG_OUTPUT = "../outputs/logs"
-AGENT_OUTPUT = "../outputs/saved_nns"
-```
-
-### NNTest.py
-```python
-INPUT_HANDS = "../data/test_dataset.json"
-NN_PATH = "../outputs/saved_nns/model_4.pth"
-```
+## Ruleset: 
+PNG IMAGE HERE
 
 ## Requirements
 - Python 3.10+
@@ -108,7 +80,7 @@ NN_PATH = "../outputs/saved_nns/model_4.pth"
 
 
 ## Note
-This project is **experimental and for personal exploration**. It is not intended to be fully reproducible or production-ready. Expect rough edges and hardcoded paths. The trained AI achieves approximately 1% loss compared to the 0.5% theoretical optimal loss in Blackjack.
+This project is **experimental and for personal exploration**. It is not intended to be fully reproducible or production-ready. Expect rough edges and hardcoded paths. The trained AI achieves approximately 1% loss compared to the 0.5% theoretical optimal loss in Blackjack with the simulated rule set.
 
 
 ## License

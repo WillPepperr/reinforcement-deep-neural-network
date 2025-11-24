@@ -19,14 +19,15 @@ AGENT_OUTPUT = f"../outputs/saved_nns"
 LAYER_1_SIZE = 32
 LAYER_2_SIZE = 32
 
-
+# Best batch -0.0231  {"batch_size": 64, "gamma": 0.25, "learning_rate": 0.00005,  "epsilon_decay": 0.999995, "epsilon_min": 0.0005},,
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+# Add batch parameteres here:
 parameter_sets = [
-    {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.00005,  "epsilon_decay": 0.99995, "epsilon_min": 0.0005},
-    {"batch_size": 64, "gamma": 0.35, "learning_rate": 0.0001,  "epsilon_decay": 0.99995, "epsilon_min": 0.001},
-    {"batch_size": 64, "gamma": 0.45, "learning_rate": 0.005,  "epsilon_decay": 0.99995, "epsilon_min": 0.01},
-    {"batch_size": 64, "gamma": 0.45, "learning_rate": 0.0005,  "epsilon_decay": 0.999985, "epsilon_min": 0.01},
+    {"batch_size": 64, "gamma": 0.25, "learning_rate": 0.0001,  "epsilon_decay": 0.999995, "epsilon_min": 0.0001},
+    {"batch_size": 64, "gamma": 0.25, "learning_rate": 0.0001,  "epsilon_decay": 0.999995, "epsilon_min": 0.00005},
+    {"batch_size": 64, "gamma": 0.25, "learning_rate": 0.00005,  "epsilon_decay": 0.999995, "epsilon_min": 0.00005},
+    {"batch_size": 64, "gamma": 0.25, "learning_rate": 0.00005,  "epsilon_decay": 0.999985, "epsilon_min": 0.000001},
 ]
 
 
@@ -410,7 +411,7 @@ def train_model_wrapper(param_index, param_dict, dealer_hands, player_hands):
     agent.train(total_steps, log_file, process_callback=progress_callback)
     pbar.close()
 
-    model_path = f"{AGENT_OUTPUT}/saved_nns/model_{param_index+1}.pth"
+    model_path = f"{AGENT_OUTPUT}/model_{param_index+1}.pth"
     torch.save(agent.model.state_dict(), model_path)
     print(f"Model {param_index+1} saved at {model_path}")
 

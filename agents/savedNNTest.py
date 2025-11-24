@@ -3,10 +3,12 @@ import torch
 import torch.nn as nn
 import json
 
-INPUT_HANDS = "../data/ten_million.json"
+INPUT_HANDS = "../data/test_dataset.json"
 NN_PATH = "../outputs/saved_nns/model_4.pth"
-LAYER_1 = 16
-LAYER_2 = 16
+
+# Enter layer size for model
+LAYER_1 = 32
+LAYER_2 = 32 
 
 class Fixed_shoe:
     def __init__(self, fixed_dealer_sequence=None, fixed_player_sequence=None):
@@ -46,6 +48,11 @@ class Fixed_shoe:
             )
         return card
 
+    def reset_shoe(self):
+        self.dealer_index = 0
+        self.player_index = 0
+
+        return None
 
 
 class BlackjackEnvAI:
@@ -177,7 +184,6 @@ class BlackjackEnvAI:
                 reward *= self.player_hand.split_multiplier
                 winnings *= self.player_hand.split_multiplier
         else:
-            # Handle dealer blackjack cases
             if self.check_player_blackjack():
                 reward = 0
                 winnings = 0
@@ -186,7 +192,6 @@ class BlackjackEnvAI:
                 winnings = -1
             self.done = True
 
-        # Signal hand completion to Shoe
         if self.is_hand_over():
             self.shoe.deal(hand_over_signal=True)
 
@@ -213,7 +218,6 @@ def load_logs(filename="card_logs.json"):
     with open(filename, "r") as file:
         logs = json.load(file)
 
-     # Ensure only integers are passed as card values
     dealer_cards = [[int(v) if isinstance(v, (int, str)) else v.value for v in hand] for hand in logs["dealer_cards"]]
     player_cards = [[int(v) if isinstance(v, (int, str)) else v.value for v in hand] for hand in logs["player_cards"]]
 
@@ -228,6 +232,7 @@ if __name__ == "__main__":
     env = BlackjackEnvAI(dealer_sequence=dealer_hands, player_sequence=player_hands)
 
     model = DQN(action_size=4).to(device)
+    results = []
     for i in range(4):
         NN_PATH = f"../outputs/saved_nns/model_{i+1}.pth"
         model.load_state_dict(torch.load(NN_PATH, map_location=device))
@@ -235,12 +240,14 @@ if __name__ == "__main__":
 
         total_reward = 0
         total_winnings = 0
+        env.shoe.reset_shoe()
+
         for episode in range(len(dealer_hands)):
             state = env.reset()
             done = False
             episode_reward = 0
             episode_winnings = 0
-            if episode % 10000 == 0:
+            if episode % 100000 == 0:
                 print(f"{episode} completed episodes")
             while not done:
                 state = state.to(device)
@@ -256,5 +263,6 @@ if __name__ == "__main__":
                 episode_winnings += winnings
             total_reward += episode_reward
             total_winnings += episode_winnings 
-        print(f"Average reward: {total_reward / len(dealer_hands)}")
-        print(f"Average winnings: {total_winnings / len(dealer_hands)}")
+        results.append(f"model {i+1} Average reward: {total_reward / len(dealer_hands)}")
+        results.append(f"model {i+1} Average winnings: {total_winnings / len(dealer_hands)}")
+    print(results)
