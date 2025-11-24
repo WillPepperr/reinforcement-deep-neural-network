@@ -1,4 +1,3 @@
-"""
 # AI Blackjack Player
 
 An AI agent that learns how to play Blackjack using PyTorch and deep reinforcement learning. This includes a realalistic simulated blackjack training evniornment, card dataset builder for consistant input data, and benchmarking modules to evaluate AI performance.
