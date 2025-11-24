@@ -31,8 +31,8 @@ This project is **experimental** and not intended to be reproducible or producti
 Clone the repository and install the dependencies:
 
 ```bash
-git clone <repo-url>
-cd <repo-folder>
+git clone https://github.com/WillPepperr/reinforcement-deep-neural-network.git)
+cd reinforcement-deep-neural-network
 pip install -r requirements.txt
 ```
 
